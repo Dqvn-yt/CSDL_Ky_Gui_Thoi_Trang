@@ -7,8 +7,8 @@ title Quản lý sàn ký gửi đồ thời trang cũ
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "APP=%ROOT%\app\QuanLyKyGui"
-set "DBDIR=%ROOT%\db"
-set "BAK=%ROOT%\bak\QuanLyKyGuiThoiTrang_Full_20261115.bak"
+set "DBDIR=%APP%\db"
+set "BAK=%APP%\bak\QuanLyKyGuiThoiTrang_Full_20261115.bak"
 set "DBNAME=QuanLyKyGuiThoiTrang"
 set "SQLCMD=sqlcmd -S localhost -E -C -I -f 65001"
 
@@ -21,7 +21,7 @@ if errorlevel 1 (
     goto :fail
 )
 
-where sqlcmd >nul 2>&1
+call :find_sqlcmd
 if errorlevel 1 (
     echo [CẢNH BÁO] Không tìm thấy sqlcmd, các bước đụng tới SQL Server sẽ thất bại.
 )
@@ -90,7 +90,7 @@ goto :done
 
 :do_test
 echo === Kiểm thử ràng buộc CSDL ===
-where sqlcmd >nul 2>&1
+call :find_sqlcmd
 if errorlevel 1 (
     echo [LỖI] Không tìm thấy sqlcmd.
     goto :fail
@@ -151,8 +151,22 @@ echo Yêu cầu: .NET 9 SDK, SQL Server 2025, sqlcmd.
 goto :done
 
 
-:ensure_db
+:find_sqlcmd
 where sqlcmd >nul 2>&1
+if not errorlevel 1 exit /b 0
+for %%P in ("%ProgramFiles%" "%ProgramFiles(x86)%") do (
+    for /d %%D in ("%%~P\Microsoft SQL Server\Client SDK\ODBC\*") do (
+        if exist "%%~fD\Tools\Binn\sqlcmd.exe" (
+            set "PATH=%%~fD\Tools\Binn;%PATH%"
+            exit /b 0
+        )
+    )
+)
+exit /b 1
+
+
+:ensure_db
+call :find_sqlcmd
 if errorlevel 1 (
     echo [LỖI] Không tìm thấy sqlcmd. Cài SQL Server Command Line Utilities.
     exit /b 1
@@ -166,7 +180,7 @@ if not defined DBID (
 )
 if /i "%DBID%"=="NULL" (
     echo Chưa có CSDL %DBNAME%, đang khởi tạo...
-    call :create_db
+    call :create_db_scripts
     if errorlevel 1 exit /b 1
 ) else (
     echo Đã có CSDL %DBNAME%.
