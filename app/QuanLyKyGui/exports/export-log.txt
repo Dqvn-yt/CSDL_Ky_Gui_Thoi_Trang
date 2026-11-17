@@ -1,0 +1,5 @@
+Bắt đầu 16/11/2026 19:10:34
+Tra cứu: E:\Quanap\exports\tra-cuu-san-pham_20261116_191034.xlsx
+Doanh thu: E:\Quanap\exports\bao-cao-doanh-thu_20261116_191035.xlsx
+Quyết toán: E:\Quanap\exports\bao-cao-quyet-toan_20261116_191035.xlsx
+Hoàn tất 16/11/2026 19:10:35

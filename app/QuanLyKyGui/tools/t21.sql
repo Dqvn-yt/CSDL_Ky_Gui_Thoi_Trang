@@ -1,0 +1,14 @@
+﻿USE [QuanLyKyGuiThoiTrang];
+SET NOCOUNT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @tt INT;
+    EXEC dbo.sp_GhiNhanThanhToan @MaDH = 25, @SoTien = 1000000, @PhuongThuc = N'Tiền mặt', @MaGiaoDich = NULL, @GhiChu = N'Thu thua', @MaTTDH = @tt OUTPUT;
+    PRINT 'PAY OK';
+    SELECT MaDH, TrangThai FROM dbo.DON_HANG WHERE MaDH = 25;
+    ROLLBACK TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    PRINT 'ERROR: ' + ERROR_MESSAGE();
+END CATCH;
