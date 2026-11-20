@@ -7,8 +7,8 @@ internal sealed class frmDangBanSanPham : Form
     private readonly Label _lblError = new()
     {
         AutoSize = false,
-        Height = 22,
-        Width = 380,
+        Dock = DockStyle.Fill,
+        Margin = new Padding(0),
         Font = Theme.Small,
         ForeColor = Theme.Danger
     };
@@ -19,9 +19,7 @@ internal sealed class frmDangBanSanPham : Form
     public frmDangBanSanPham(string productName, decimal currentPrice)
     {
         Text = "Đăng bán sản phẩm — Thiên Kim Consignment";
-        ClientSize = new Size(440, 286);
-        MinimumSize = new Size(440, 286);
-        MaximumSize = new Size(440, 286);
+        ClientSize = new Size(480, 320);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -40,9 +38,9 @@ internal sealed class frmDangBanSanPham : Form
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
         var titles = new Panel { Dock = DockStyle.Fill, BackColor = Color.Transparent };
         titles.Controls.Add(new Label
@@ -74,7 +72,8 @@ internal sealed class frmDangBanSanPham : Form
             Font = Theme.Small,
             ForeColor = Theme.Muted,
             AutoSize = false,
-            Dock = DockStyle.Fill
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 8)
         };
         root.Controls.Add(hint, 0, 3);
 
@@ -84,6 +83,7 @@ internal sealed class frmDangBanSanPham : Form
         save.Click += (_, _) => Confirm();
         var actions = Theme.Actions(cancel, save);
         actions.Dock = DockStyle.Right;
+        actions.Margin = new Padding(0);
         root.Controls.Add(actions, 0, 4);
 
         Controls.Add(root);

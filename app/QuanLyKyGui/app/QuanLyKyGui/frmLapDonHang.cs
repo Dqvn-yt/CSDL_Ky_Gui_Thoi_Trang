@@ -5,7 +5,16 @@ namespace QuanLyKyGui;
 
 internal sealed class frmLapDonHang : Form
 {
-    private readonly ComboBox _cboCustomer = Theme.Combo(240);
+    private DataRow? _buyer;
+    private readonly RowStyle _infoRow = new(SizeType.Absolute, 294);
+    private readonly TableLayoutPanel _infoLayout = new();
+    private readonly TableLayoutPanel _buyerLayout = new();
+    private readonly TableLayoutPanel _buyerHeading = new() { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+    private readonly TableLayoutPanel _buyerActions = new() { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+    private readonly Label _lblBuyerName = new() { Dock = DockStyle.Fill, Font = Theme.H3, ForeColor = Theme.Ink, AutoEllipsis = true };
+    private readonly Label _lblBuyerContact = new() { Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Muted, AutoEllipsis = true };
+    private readonly Button _findBuyer = Theme.GhostButton("Tìm khách hàng", 136);
+    private readonly Button _addBuyer = Theme.GhostButton("+ Thêm khách mới", 174);
     private readonly ComboBox _cboEmployee = Theme.Combo(230);
     private readonly DateTimePicker _dtpOrder = Theme.DatePicker(170);
     private readonly DateTimePicker _dtpDue = Theme.DatePicker(170);
@@ -22,7 +31,14 @@ internal sealed class frmLapDonHang : Form
     private readonly Label _lblDraftError = new() { AutoSize = true, Font = Theme.Small, ForeColor = Theme.Danger };
 
     private readonly DataGridView _gridOrders = new();
-    private readonly Label _lblOrderInfo = new() { AutoSize = false, Height = 24, Font = Theme.Small, ForeColor = Theme.Muted };
+    private readonly Label _lblOrderInfo = new() { Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Ink };
+    private readonly Label _lblSelectedOrder = new() { Dock = DockStyle.Fill, Font = Theme.Bold, ForeColor = Theme.Accent, AutoEllipsis = true };
+    private readonly Label _lblOrderMessage = new() { Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Muted };
+    private readonly TableLayoutPanel _paymentFields = new();
+    private readonly Button _payButton = Theme.PrimaryButton("Thu tiền", 120);
+    private readonly Button _completeButton = Theme.GoldButton("Hoàn tất đơn", 140);
+    private readonly Button _cancelButton = Theme.GhostButton("Hủy đơn", 100);
+    private bool _loadingOrders;
     private readonly NumericUpDown _numPay = Theme.Number(1_000_000_000m, 120);
     private readonly ComboBox _cboMethod = Theme.Combo(104);
     private readonly ComboBox _cboPayStatus = Theme.Combo(104);
@@ -53,7 +69,13 @@ internal sealed class frmLapDonHang : Form
         LoadLookups();
         LoadProducts();
         LoadOrders();
-        Shown += (_, _) => _txtSearch.Focus();
+        Shown += (_, _) =>
+        {
+            _gridOrders.ClearSelection();
+            _gridOrders.CurrentCell = null;
+            ShowSelectedOrder();
+            _findBuyer.Focus();
+        };
     }
 
     private void BuildUi()
@@ -78,7 +100,7 @@ internal sealed class frmLapDonHang : Form
 
         var left = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0, 0, 14, 0) };
         left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        left.RowStyles.Add(new RowStyle(SizeType.Absolute, 292));
+        left.RowStyles.Add(_infoRow);
         left.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         left.Controls.Add(BuildInfoCard(), 0, 0);
         left.Controls.Add(BuildDraftCard(), 0, 1);
@@ -127,30 +149,88 @@ internal sealed class frmLapDonHang : Form
 
     private Control BuildInfoCard()
     {
-        var card = new Card("1. Thông tin đơn hàng");
-        card.Dock = DockStyle.Fill;
-        card.Margin = new Padding(0, 0, 0, 12);
-        card.Padding = new Padding(16, 42, 16, 10);
+        var card = new Card("1. Thông tin đơn hàng") {
+            Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 12), Padding = new Padding(16, 44, 16, 14)
+        };
+        var viewport = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(0) };
+        _infoLayout.Dock = DockStyle.Top;
+        _infoLayout.ColumnCount = 1;
+        _infoLayout.RowCount = 3;
+        _infoLayout.Margin = new Padding(0);
+        _infoLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _infoLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
+        _infoLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
+        _infoLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
 
-        var flow = Fields.Flow(400, 190);
-        flow.Dock = DockStyle.Fill;
+        _buyerLayout.Dock = DockStyle.Fill;
+        _buyerLayout.ColumnCount = 1;
+        _buyerLayout.RowCount = 4;
+        _buyerLayout.BackColor = Theme.Canvas;
+        _buyerLayout.Padding = new Padding(12, 10, 12, 10);
+        _buyerLayout.Margin = new Padding(0, 0, 0, 16);
+        _buyerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        foreach (var height in new[] { 36, 0, 0, 40 })
+            _buyerLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var buyerHeading = _buyerHeading;
+        buyerHeading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        buyerHeading.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 136));
+        buyerHeading.Controls.Add(new Label { Text = "Khách hàng mua", Dock = DockStyle.Fill, Font = Theme.Bold,
+            ForeColor = Theme.Ink, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0) }, 0, 0);
+        _findBuyer.Dock = DockStyle.Fill;
+        _findBuyer.Margin = new Padding(4, 0, 0, 4);
+        _findBuyer.ForeColor = Theme.Accent;
+        _findBuyer.Click += (_, _) => FindBuyer();
+        buyerHeading.Controls.Add(_findBuyer, 1, 0);
+        _buyerLayout.Controls.Add(buyerHeading, 0, 0);
+        _lblBuyerName.Margin = new Padding(0, 4, 0, 0);
+        _lblBuyerContact.Margin = new Padding(0, 2, 0, 0);
+        _buyerLayout.Controls.Add(_lblBuyerName, 0, 1);
+        _buyerLayout.Controls.Add(_lblBuyerContact, 0, 2);
+        _buyerActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _buyerActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _addBuyer.Dock = DockStyle.Fill;
+        _addBuyer.Margin = new Padding(0);
+        _addBuyer.Click += (_, _) => AddCustomer();
+        _buyerActions.Controls.Add(_addBuyer, 1, 0);
+        _buyerLayout.Controls.Add(_buyerActions, 0, 3);
+        _infoLayout.Controls.Add(_buyerLayout, 0, 0);
 
-        var customerRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
-        customerRow.Controls.Add(Fields.Field("Khách hàng mua", _cboCustomer));
-        var newCustomer = Theme.GhostButton("+ Khách mới", 120);
-        newCustomer.Margin = new Padding(0, 16, 8, 0);
-        newCustomer.Click += (_, _) => AddCustomer();
-        customerRow.Controls.Add(newCustomer);
-        flow.Controls.Add(customerRow);
-
-        flow.Controls.Add(Fields.Field("Nhân viên lập đơn", _cboEmployee));
-        flow.Controls.Add(Fields.Field("Ngày lập", _dtpOrder));
-        flow.Controls.Add(Fields.Field("Hạn thanh toán", _dtpDue));
-        flow.Controls.Add(Fields.Field("Ghi chú", _txtNote));
-        card.Body.Controls.Add(flow);
+        var employeeAndDate = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+        employeeAndDate.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        employeeAndDate.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _cboEmployee.DropDownWidth = 280;
+        var employee = OrderInfoField("Nhân viên lập đơn", _cboEmployee);
+        employee.Margin = new Padding(0, 0, 12, 8);
+        employeeAndDate.Controls.Add(employee, 0, 0);
+        employeeAndDate.Controls.Add(OrderInfoField("Ngày lập", _dtpOrder), 1, 0);
+        _infoLayout.Controls.Add(employeeAndDate, 0, 1);
+        var dueAndNote = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+        dueAndNote.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        dueAndNote.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        var due = OrderInfoField("Hạn thanh toán", _dtpDue);
+        due.Margin = new Padding(0, 0, 12, 8);
+        dueAndNote.Controls.Add(due, 0, 0);
+        dueAndNote.Controls.Add(OrderInfoField("Ghi chú", _txtNote), 1, 0);
+        _infoLayout.Controls.Add(dueAndNote, 0, 2);
+        viewport.Controls.Add(_infoLayout);
+        card.Body.Controls.Add(viewport);
+        UpdateBuyerInfo();
         return card;
     }
 
+    private static Control OrderInfoField(string title, Control input)
+    {
+        var field = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0, 0, 0, 8) };
+        field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        field.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+        field.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        field.Controls.Add(new Label { Text = title, Dock = DockStyle.Fill, Font = Theme.Bold,
+            ForeColor = Theme.Ink, Margin = new Padding(0) }, 0, 0);
+        input.Dock = DockStyle.Fill;
+        input.Margin = new Padding(0, 3, 0, 0);
+        field.Controls.Add(input, 0, 1);
+        return field;
+    }
     private Control BuildDraftCard()
     {
         var card = new Card("2. Đơn hàng nháp");
@@ -285,79 +365,164 @@ internal sealed class frmLapDonHang : Form
 
     private Control BuildOrdersCard()
     {
-        var card = new Card("4. Đơn hàng gần đây & xử lý thanh toán");
-        card.Dock = DockStyle.Fill;
-        card.Margin = new Padding(0);
-        card.Padding = new Padding(16, 40, 16, 8);
-
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
+        var card = new Card("4. Đơn hàng gần đây & xử lý thanh toán") {
+            Dock = DockStyle.Fill, Margin = new Padding(0), Padding = new Padding(16, 40, 16, 8)
+        };
+        // Bảng đơn có thanh cuộn riêng; cả khu vực cũng cuộn khi cửa sổ thấp.
+        var viewport = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(0) };
+        var layout = new TableLayoutPanel {
+            Dock = DockStyle.Top, Height = 500, ColumnCount = 1, RowCount = 4, Margin = new Padding(0)
+        };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
-
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 310));
+        layout.Controls.Add(new Label {
+            Text = "Chọn hóa đơn cần thanh toán", Dock = DockStyle.Fill, Font = Theme.Bold, ForeColor = Theme.Ink
+        }, 0, 0);
         Theme.StyleGrid(_gridOrders);
         _gridOrders.Dock = DockStyle.Fill;
-        _gridOrders.Margin = new Padding(0, 2, 0, 4);
+        _gridOrders.Margin = new Padding(0);
+        _gridOrders.MultiSelect = false;
+        _gridOrders.ScrollBars = ScrollBars.Both;
+        _gridOrders.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
         _gridOrders.SelectionChanged += (_, _) => ShowSelectedOrder();
-        layout.Controls.Add(_gridOrders, 0, 0);
+        _gridOrders.CurrentCellChanged += (_, _) => ShowSelectedOrder();
+        layout.Controls.Add(_gridOrders, 0, 1);
 
-        _lblOrderInfo.Dock = DockStyle.Fill;
-        _lblOrderInfo.Text = "Chọn một đơn hàng để thu tiền hoặc hoàn tất.";
-        _lblOrderInfo.AutoEllipsis = true;
-        layout.Controls.Add(_lblOrderInfo, 0, 1);
+        var payment = new Panel {
+            Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, BackColor = Theme.Surface,
+            Padding = new Padding(10), Margin = new Padding(0)
+        };
+        var paymentLayout = new TableLayoutPanel {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Margin = new Padding(0)
+        };
+        paymentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        paymentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+        paymentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
+        paymentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        paymentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        paymentLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var payRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
+        var banner = new TableLayoutPanel {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Theme.AccentSoft,
+            Padding = new Padding(8, 4, 8, 4), Margin = new Padding(0, 0, 0, 6)
+        };
+        banner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        banner.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+        banner.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        banner.Controls.Add(_lblSelectedOrder, 0, 0);
+        banner.Controls.Add(_lblOrderInfo, 0, 1);
+        paymentLayout.Controls.Add(banner, 0, 0);
+
+        _paymentFields.Dock = DockStyle.Fill;
+        _paymentFields.ColumnCount = 3;
+        _paymentFields.RowCount = 2;
+        _paymentFields.Margin = new Padding(0);
+        for (var i = 0; i < 3; i++) _paymentFields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3));
+        for (var i = 0; i < 2; i++) _paymentFields.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         _cboMethod.Items.AddRange(new object[] { "Tiền mặt", "Chuyển khoản", "Thẻ", "Ví điện tử" });
         _cboMethod.SelectedIndex = 0;
         _cboPayStatus.Items.AddRange(new object[] { "Thành công", "Chờ xử lý", "Thất bại" });
         _cboPayStatus.SelectedIndex = 0;
-        payRow.Controls.Add(Fields.Field("Số tiền thu", _numPay));
-        payRow.Controls.Add(Fields.Field("Phương thức", _cboMethod));
-        payRow.Controls.Add(Fields.Field("Kết quả giao dịch", _cboPayStatus));
-        payRow.Controls.Add(Fields.Field("Mã giao dịch", _txtTxn));
-        payRow.Controls.Add(Fields.Field("Ghi chú", _txtPayNote));
-        layout.Controls.Add(payRow, 0, 2);
+        _paymentFields.Controls.Add(PaymentField("Số tiền thu", _numPay), 0, 0);
+        _paymentFields.Controls.Add(PaymentField("Phương thức", _cboMethod), 1, 0);
+        _paymentFields.Controls.Add(PaymentField("Kết quả giao dịch", _cboPayStatus), 2, 0);
+        _paymentFields.Controls.Add(PaymentField("Mã giao dịch", _txtTxn), 0, 1);
+        var note = PaymentField("Ghi chú thanh toán", _txtPayNote);
+        _paymentFields.Controls.Add(note, 1, 1);
+        _paymentFields.SetColumnSpan(note, 2);
+        paymentLayout.Controls.Add(_paymentFields, 0, 1);
 
-        var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
-        var pay = Theme.PrimaryButton("Thu tiền", 120);
-        pay.Click += (_, _) => RecordPayment();
-        actionRow.Controls.Add(pay);
-        var complete = Theme.GoldButton("Hoàn tất đơn", 140);
-        complete.Click += (_, _) => CompleteOrder();
-        actionRow.Controls.Add(complete);
-        var cancel = Theme.GhostButton("Hủy đơn", 100);
-        cancel.Click += (_, _) => CancelOrder();
-        actionRow.Controls.Add(cancel);
-        actionRow.Controls.Add(Fields.Field("Lý do hủy", _txtCancelReason));
-        layout.Controls.Add(actionRow, 0, 3);
-
-        card.Body.Controls.Add(layout);
+        var actions = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = new Padding(0) };
+        for (var i = 0; i < 3; i++) actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 3));
+        var buttons = new[] { _payButton, _completeButton, _cancelButton };
+        for (var i = 0; i < buttons.Length; i++) {
+            buttons[i].Dock = DockStyle.Fill;
+            buttons[i].Margin = new Padding(0, 2, i == 2 ? 0 : 8, 4);
+            actions.Controls.Add(buttons[i], i, 0);
+        }
+        _payButton.Click += (_, _) => RecordPayment();
+        _completeButton.Click += (_, _) => CompleteOrder();
+        _cancelButton.Click += (_, _) => CancelOrder();
+        paymentLayout.Controls.Add(actions, 0, 2);
+        var cancelRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+        cancelRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+        cancelRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        cancelRow.Controls.Add(new Label { Text = "Lý do hủy", Dock = DockStyle.Fill, Font = Theme.Small,
+            ForeColor = Theme.Muted, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
+        _txtCancelReason.Dock = DockStyle.Fill;
+        _txtCancelReason.Margin = new Padding(0, 6, 0, 0);
+        cancelRow.Controls.Add(_txtCancelReason, 1, 0);
+        paymentLayout.Controls.Add(cancelRow, 0, 3);
+        paymentLayout.Controls.Add(_lblOrderMessage, 0, 4);
+        payment.Controls.Add(paymentLayout);
+        layout.Controls.Add(payment, 0, 3);
+        viewport.Controls.Add(layout);
+        viewport.ClientSizeChanged += (_, _) => layout.Height = Math.Max(500, viewport.ClientSize.Height);
+        card.Body.Controls.Add(viewport);
         return card;
     }
 
-    private void LoadCustomers(int? selectId = null)
+    private static Control PaymentField(string title, Control input)
     {
-        var customers = Db.Query("SELECT MaKH, HoTen, SoDienThoai FROM dbo.KHACH_HANG ORDER BY HoTen");
-        var view = customers.Copy();
-        view.Columns.Add("HienThi", typeof(string));
-        foreach (DataRow row in view.Rows) row["HienThi"] = $"{row["HoTen"]} — {row["SoDienThoai"]}";
-        _cboCustomer.DataSource = view;
-        _cboCustomer.DisplayMember = "HienThi";
-        _cboCustomer.ValueMember = "MaKH";
-
-        if (selectId is int id)
+        var field = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0, 0, 8, 4) };
+        field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        field.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+        field.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        field.Controls.Add(new Label { Text = title, Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Muted }, 0, 0);
+        input.Dock = DockStyle.Fill;
+        input.Margin = new Padding(0);
+        field.Controls.Add(input, 0, 1);
+        return field;
+    }
+    private void UpdateBuyerInfo()
+    {
+        _lblBuyerName.Text = _buyer is null ? "" : $"{_buyer["HoTen"]} — KH{_buyer["MaKH"]}";
+        var selected = _buyer is not null;
+        if (selected)
         {
-            for (var i = 0; i < view.Rows.Count; i++)
-            {
-                if (Convert.ToInt32(view.Rows[i]["MaKH"]) == id)
-                {
-                    _cboCustomer.SelectedIndex = i;
-                    break;
-                }
-            }
+            _buyerHeading.ColumnStyles[1].Width = 136;
+            _buyerHeading.Controls.Add(_findBuyer, 1, 0);
+            _findBuyer.Margin = new Padding(4, 0, 0, 4);
         }
+        else
+        {
+            _buyerHeading.ColumnStyles[1].Width = 0;
+            _buyerActions.Controls.Add(_findBuyer, 0, 0);
+            _findBuyer.Margin = new Padding(0, 0, 8, 0);
+        }
+        _lblBuyerName.Visible = selected;
+        _lblBuyerContact.Visible = selected;
+        _buyerLayout.RowStyles[1].Height = selected ? _lblBuyerName.Font.Height + 8 : 0;
+        _buyerLayout.RowStyles[2].Height = selected ? _lblBuyerContact.Font.Height * 3 + 12 : 0;
+        _buyerLayout.RowStyles[3].Height = selected ? 0 : Math.Max(36, _findBuyer.Font.Height + 18);
+        var buyerHeight = _buyerLayout.RowStyles.Cast<RowStyle>().Sum(row => row.Height) + _buyerLayout.Margin.Vertical + _buyerLayout.Padding.Vertical;
+        _infoLayout.RowStyles[0].Height = buyerHeight;
+        _infoLayout.Height = (int)Math.Ceiling(_infoLayout.RowStyles.Cast<RowStyle>().Sum(row => row.Height));
+        var card = _infoLayout.Parent?.Parent?.Parent;
+        _infoRow.Height = _infoLayout.Height + (card?.Padding.Vertical ?? 52) + (card?.Margin.Vertical ?? 12);
+        _findBuyer.Text = _buyer is null ? "Tìm khách hàng" : "Đổi khách";
+        _addBuyer.Visible = _buyer is null;
+        if (_buyer is DataRow buyer)
+        {
+            string Value(string column) => string.IsNullOrWhiteSpace(Convert.ToString(buyer[column]))
+                ? "Chưa cập nhật" : Convert.ToString(buyer[column])!;
+            _lblBuyerContact.Text = $"Điện thoại: {Value("SoDienThoai")}\r\nEmail: {Value("Email")}\r\nĐịa chỉ: {Value("DiaChi")}";
+        }
+        else _lblBuyerContact.Text = "";
+    }
+
+    private void FindBuyer()
+    {
+        int? currentId = _buyer is null ? null : Convert.ToInt32(_buyer["MaKH"]);
+        using var dialog = new frmChonKhachHang(currentId, "khách hàng mua");
+        var ownerWindow = Parent?.FindForm() ?? FindForm();
+        var result = ownerWindow is null ? dialog.ShowDialog() : dialog.ShowDialog(ownerWindow);
+        if (result != DialogResult.OK || dialog.SelectedCustomer is null) return;
+        _buyer = dialog.SelectedCustomer;
+        UpdateBuyerInfo();
     }
 
     private void AddCustomer()
@@ -366,16 +531,22 @@ internal sealed class frmLapDonHang : Form
         var ownerWindow = Parent?.FindForm() ?? FindForm();
         var result = ownerWindow is null ? dialog.ShowDialog() : dialog.ShowDialog(ownerWindow);
         if (result != DialogResult.OK) return;
-
-        LoadCustomers(dialog.NewCustomerId);
-        SetOrderMessage($"Đã thêm khách hàng mới: {dialog.NewCustomerName}. Đơn hàng sẽ dùng khách này.", false);
+        try
+        {
+            var customers = Db.Query("SELECT MaKH, HoTen, SoDienThoai, Email, DiaChi FROM dbo.KHACH_HANG WHERE MaKH = @Id",
+                Db.Param("@Id", dialog.NewCustomerId));
+            if (customers.Rows.Count == 0)
+                throw new InvalidOperationException("Hồ sơ vừa tạo không còn tồn tại. Hãy tìm và chọn lại khách hàng.");
+            _buyer = customers.Rows[0];
+            UpdateBuyerInfo();
+        }
+        catch (Exception ex) { _lblDraftError.Text = "Đã tạo khách nhưng chưa tải được hồ sơ: " + Db.ErrorMessage(ex); }
     }
-
     private void LoadLookups()
     {
         try
         {
-            LoadCustomers();
+
 
             var employees = Db.Query("SELECT MaNV, HoTen, ChucVu FROM dbo.NHAN_VIEN WHERE TrangThai = N'Đang làm việc' ORDER BY HoTen");
             var ev = employees.Copy();
@@ -384,6 +555,7 @@ internal sealed class frmLapDonHang : Form
             _cboEmployee.DataSource = ev;
             _cboEmployee.DisplayMember = "HienThi";
             _cboEmployee.ValueMember = "MaNV";
+            DemoSession.SelectManager(_cboEmployee);
 
             _dtpOrder.Value = DateTime.Now;
             _dtpDue.Value = DateTime.Now.AddDays(3);
@@ -433,74 +605,82 @@ ORDER BY NgayDangBan DESC, MaSP DESC;", Db.Param("@Key", key));
     {
         try
         {
+            _loadingOrders = true;
+            _lblOrderMessage.Text = "";
             var table = Db.Query(@"
-SELECT TOP 30 MaDH, TenKhachHang, NgayLap, TrangThai, TongTien, DaThu, ConLai
+SELECT MaDH, TenKhachHang, NgayLap, TrangThai, TongTien, DaThu, ConLai
 FROM dbo.vw_DonHang_TongHop
 ORDER BY NgayLap DESC, MaDH DESC;");
-            _gridOrders.DataSource = table;
-            Grid.Bind(_gridOrders, table, new Dictionary<string, string>
-            {
-                ["MaDH"] = "Mã",
-                ["TenKhachHang"] = "Khách hàng",
-                ["TrangThai"] = "Trạng thái",
-                ["TongTien"] = "Tổng tiền",
-                ["ConLai"] = "Còn lại"
+            Grid.Bind(_gridOrders, table, new Dictionary<string, string> {
+                ["MaDH"] = "Mã đơn", ["TenKhachHang"] = "Khách hàng", ["TrangThai"] = "Trạng thái",
+                ["TongTien"] = "Tổng tiền", ["ConLai"] = "Còn lại"
             }, "NgayLap", "DaThu");
-            foreach (var name in new[] { "TongTien", "ConLai" })
-                Theme.MoneyColumn(_gridOrders.Columns[name]);
-            _gridOrders.Columns["MaDH"].FillWeight = 55;
-            _gridOrders.Columns["TenKhachHang"].FillWeight = 190;
-            _gridOrders.Columns["TrangThai"].FillWeight = 105;
-            _gridOrders.Columns["TongTien"].FillWeight = 100;
-            _gridOrders.Columns["ConLai"].FillWeight = 100;
-
+            foreach (var name in new[] { "TongTien", "ConLai" }) Theme.MoneyColumn(_gridOrders.Columns[name]);
+            _gridOrders.Columns["MaDH"]!.FillWeight = 65;
+            _gridOrders.Columns["TenKhachHang"]!.FillWeight = 175;
+            _gridOrders.Columns["TrangThai"]!.FillWeight = 125;
+            _gridOrders.Columns["TongTien"]!.FillWeight = 100;
+            _gridOrders.Columns["ConLai"]!.FillWeight = 100;
+            _gridOrders.ClearSelection();
+            _gridOrders.CurrentCell = null;
             if (selectId.HasValue)
-            {
                 foreach (DataGridViewRow row in _gridOrders.Rows)
-                {
-                    if (Convert.ToInt32(row.Cells["MaDH"].Value) == selectId.Value)
-                    {
-                        row.Selected = true;
+                    if (Convert.ToInt32(row.Cells["MaDH"].Value) == selectId.Value) {
                         _gridOrders.CurrentCell = row.Cells["MaDH"];
+                        row.Selected = true;
+                        _gridOrders.FirstDisplayedScrollingRowIndex = row.Index;
                         break;
                     }
-                }
-            }
-            ShowSelectedOrder();
         }
         catch (Exception ex)
         {
+            _gridOrders.DataSource = null;
             SetOrderMessage("Không tải được đơn hàng: " + Db.ErrorMessage(ex), true);
         }
+        finally { _loadingOrders = false; }
+        ShowSelectedOrder();
     }
 
     private void ShowSelectedOrder()
     {
-        if (_gridOrders.CurrentRow is null)
+        if (_loadingOrders) return;
+        if (_gridOrders.CurrentRow?.DataBoundItem is not DataRowView view)
         {
             _selected = null;
-            _lblOrderInfo.Text = "Chọn một đơn hàng để thu tiền hoặc hoàn tất.";
-            _lblOrderInfo.ForeColor = Theme.Muted;
+            _lblSelectedOrder.Text = "Chưa chọn đơn hàng";
+            _lblOrderInfo.Text = "Chọn một hóa đơn trong bảng phía trên để xem và xử lý thanh toán.";
+            _numPay.Value = 0;
+            _paymentFields.Enabled = false;
+            _payButton.Enabled = _completeButton.Enabled = _cancelButton.Enabled = false;
+            _txtCancelReason.Enabled = false;
             return;
         }
-
-        var row = _gridOrders.CurrentRow;
-        var maDh = Convert.ToInt32(row.Cells["MaDH"].Value);
-        var total = Convert.ToDecimal(row.Cells["TongTien"].Value);
-        var paid = Convert.ToDecimal(row.Cells["DaThu"].Value);
-        var remain = Convert.ToDecimal(row.Cells["ConLai"].Value);
-        var status = Convert.ToString(row.Cells["TrangThai"].Value) ?? "";
-        _selected = (maDh, total, paid, remain, status);
-
-        var extra = status == "Chờ thanh toán" && remain < 0 ? "  •  Đã trả thừa, chờ đối soát" : string.Empty;
-        _lblOrderInfo.ForeColor = Theme.Muted;
-        _lblOrderInfo.Text =
-            $"Đơn #{maDh}  •  {row.Cells["TenKhachHang"].Value}  •  {status}  —  Tổng {total:#,##0} đ  •  Đã thu {paid:#,##0} đ  •  Còn lại {remain:#,##0} đ{extra}";
-
-        if (status == "Chờ thanh toán" && remain > 0 && _numPay.Value == 0)
-            _numPay.Value = Math.Min(_numPay.Maximum, remain);
+        var row = view.Row;
+        var id = Convert.ToInt32(row["MaDH"]);
+        var total = Convert.ToDecimal(row["TongTien"]);
+        var paid = Convert.ToDecimal(row["DaThu"]);
+        var remain = Convert.ToDecimal(row["ConLai"]);
+        var status = Convert.ToString(row["TrangThai"]) ?? "";
+        var changed = _selected?.MaDH != id;
+        _selected = (id, total, paid, remain, status);
+        _lblSelectedOrder.Text = $"Đang chọn đơn #{id} — Khách hàng: {row["TenKhachHang"]}";
+        _lblOrderInfo.Text = $"{status}  •  Tổng: {total:#,##0} đ  •  Đã thu: {paid:#,##0} đ  •  Còn lại: {remain:#,##0} đ";
+        var canPay = status == "Chờ thanh toán" && remain > 0;
+        _paymentFields.Enabled = canPay;
+        _payButton.Enabled = canPay;
+        _completeButton.Enabled = status == "Đang xử lý" && paid >= total;
+        _cancelButton.Enabled = status == "Chờ thanh toán" && paid == 0;
+        _txtCancelReason.Enabled = _cancelButton.Enabled;
+        if (changed)
+        {
+            _txtTxn.Clear();
+            _txtPayNote.Clear();
+            _txtCancelReason.Clear();
+            _lblOrderMessage.Text = "";
+        }
+        if (!canPay) _numPay.Value = 0;
+        else if (changed || _numPay.Value == 0) _numPay.Value = Math.Min(_numPay.Maximum, remain);
     }
-
     private void AddSelectedProduct()
     {
         _lblDraftError.Text = string.Empty;
@@ -562,7 +742,7 @@ ORDER BY NgayLap DESC, MaDH DESC;");
             _lblDraftError.Text = "Đơn hàng phải có ít nhất một sản phẩm.";
             return;
         }
-        if (_cboCustomer.SelectedValue is null || _cboEmployee.SelectedValue is null)
+        if (_buyer is null || _cboEmployee.SelectedValue is null)
         {
             _lblDraftError.Text = "Vui lòng chọn khách hàng và nhân viên.";
             return;
@@ -581,7 +761,7 @@ ORDER BY NgayLap DESC, MaDH DESC;");
 
             using var cn = Db.Open();
             using var cmd = new SqlCommand("dbo.sp_TaoDonHang", cn) { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@MaKH", Convert.ToInt32(_cboCustomer.SelectedValue));
+            cmd.Parameters.AddWithValue("@MaKH", Convert.ToInt32(_buyer["MaKH"]));
             cmd.Parameters.AddWithValue("@MaNV", Convert.ToInt32(_cboEmployee.SelectedValue));
             cmd.Parameters.AddWithValue("@NgayLap", _dtpOrder.Value.Date.AddHours(DateTime.Now.Hour).AddMinutes(DateTime.Now.Minute));
             cmd.Parameters.AddWithValue("@HanThanhToan", _dtpDue.Value.Date.AddHours(17));
@@ -703,8 +883,8 @@ ORDER BY NgayLap DESC, MaDH DESC;");
 
     private void SetOrderMessage(string message, bool error)
     {
-        _lblOrderInfo.Text = message;
-        _lblOrderInfo.ForeColor = error ? Theme.Danger : Theme.Muted;
+        _lblOrderMessage.Text = message;
+        _lblOrderMessage.ForeColor = error ? Theme.Danger : Theme.Muted;
     }
 
     private static void ExecSpDb(string name, params (string, object?)[] args)
@@ -718,7 +898,8 @@ ORDER BY NgayLap DESC, MaDH DESC;");
 
     public void PrepareCapture()
     {
-        if (_cboCustomer.Items.Count > 0) _cboCustomer.SelectedIndex = 0;
+        var customers = Db.Query("SELECT TOP (1) MaKH, HoTen, SoDienThoai, Email, DiaChi FROM dbo.KHACH_HANG ORDER BY MaKH");
+        if (customers.Rows.Count > 0) { _buyer = customers.Rows[0]; UpdateBuyerInfo(); }
         if (_cboEmployee.Items.Count > 0) _cboEmployee.SelectedIndex = 0;
         _txtNote.Text = "Khách chọn 2 món, hẹn nhận hàng trong ngày.";
         if (_gridProducts.Rows.Count > 0)

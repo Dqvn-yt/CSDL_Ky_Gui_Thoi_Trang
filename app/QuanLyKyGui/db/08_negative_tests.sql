@@ -9,16 +9,16 @@ IF OBJECT_ID('tempdb..#KQ') IS NOT NULL DROP TABLE #KQ;
 CREATE TABLE #KQ (STT INT, MoTa NVARCHAR(300), KetQua NVARCHAR(10), GhiChu NVARCHAR(500));
 GO
 
-/* 1. Duyệt sản phẩm không có giá */
+/* 1. Duyệt với kết quả ngoài miền giá trị */
 BEGIN TRY
     BEGIN TRANSACTION;
-    EXEC dbo.sp_DuyetSanPham @MaSP = 11, @KetQua = N'Đã chấp nhận', @GiaDangBan = NULL;
+    EXEC dbo.sp_DuyetSanPham @MaSP = 11, @KetQua = N'Không hợp lệ';
     ROLLBACK TRANSACTION;
-    INSERT #KQ VALUES (1, N'Duyệt sản phẩm không nhập giá', N'FAIL', N'Không phát sinh lỗi.');
+    INSERT #KQ VALUES (1, N'Duyệt với kết quả không hợp lệ', N'FAIL', N'Không phát sinh lỗi.');
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-    INSERT #KQ VALUES (1, N'Duyệt sản phẩm không nhập giá', N'PASS', ERROR_MESSAGE());
+    INSERT #KQ VALUES (1, N'Duyệt với kết quả không hợp lệ', N'PASS', ERROR_MESSAGE());
 END CATCH;
 GO
 
@@ -37,7 +37,7 @@ BEGIN CATCH
 END CATCH;
 GO
 
-/* 3. Sản phẩm đã chấp nhận nhưng thiếu giá */
+/* 3. Không xét duyệt ngay trong bước lập phiếu tiếp nhận */
 BEGIN TRY
     BEGIN TRANSACTION;
     DECLARE @sp1 dbo.SanPhamKyGuiType;
@@ -46,11 +46,11 @@ BEGIN TRY
     DECLARE @pkg1 INT;
     EXEC dbo.sp_TiepNhanPhieuKyGui @MaKH = 1, @MaNV = 3, @SanPham = @sp1, @MaPKG = @pkg1 OUTPUT;
     ROLLBACK TRANSACTION;
-    INSERT #KQ VALUES (3, N'Lập phiếu với sản phẩm đã chấp nhận thiếu giá', N'FAIL', N'Không phát sinh lỗi.');
+    INSERT #KQ VALUES (3, N'Lập phiếu không được gộp xét duyệt', N'FAIL', N'Không phát sinh lỗi.');
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-    INSERT #KQ VALUES (3, N'Lập phiếu với sản phẩm đã chấp nhận thiếu giá', N'PASS', ERROR_MESSAGE());
+    INSERT #KQ VALUES (3, N'Lập phiếu không được gộp xét duyệt', N'PASS', ERROR_MESSAGE());
 END CATCH;
 GO
 

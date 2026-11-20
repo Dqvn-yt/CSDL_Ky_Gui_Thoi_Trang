@@ -9,13 +9,18 @@ namespace QuanLyKyGui;
 
 internal sealed class frmTiepNhanKyGui : Form
 {
-	private readonly ComboBox _cboCustomer = Theme.Combo(340);
+	private DataRow? _selectedCustomer;
+	private readonly Label _customerName = new() { Dock = DockStyle.Fill, Font = Theme.H2, ForeColor = Theme.Ink, AutoEllipsis = true };
+	private readonly Label _customerHint = new() { Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Muted };
+	private readonly Button _findCustomer = Theme.PrimaryButton("Tìm khách hàng", 160);
+	private readonly Button _addCustomer = Theme.GhostButton("+ Thêm khách mới", 174);
+	private readonly TableLayoutPanel _customerSections = new();
 
 	private readonly ComboBox _cboEmployee = Theme.Combo(200);
 
 	private readonly DateTimePicker _dtpDate = Theme.DatePicker(150);
 
-	private readonly TextBox _txtPhoneSearch = Theme.TextBox(null, 190);
+
 
 	private readonly TextBox _txtNote = new TextBox
 	{
@@ -36,13 +41,6 @@ internal sealed class frmTiepNhanKyGui : Form
 		AutoEllipsis = false
 	};
 
-	private readonly Label _lblSearchResult = new Label
-	{
-		AutoSize = true,
-		Font = Theme.Small,
-		ForeColor = Theme.Muted
-	};
-
 	private readonly ComboBox _cboCategory = Theme.Combo(140);
 
 	private readonly ComboBox _cboBrand = Theme.Combo(190);
@@ -58,10 +56,6 @@ internal sealed class frmTiepNhanKyGui : Form
 	private readonly TextBox _txtCondition = Theme.TextBox("Đã qua sử dụng, còn tốt 90%", 180);
 
 	private readonly NumericUpDown _numProposed = Theme.Number(500000000m, 120);
-
-	private readonly NumericUpDown _numListed = Theme.Number(500000000m, 120);
-
-	private readonly ComboBox _cboApproval = Theme.Combo(140);
 
 	private readonly DataGridView _grid = new DataGridView();
 
@@ -94,7 +88,7 @@ internal sealed class frmTiepNhanKyGui : Form
 		LoadLookups();
 		base.Shown += delegate
 		{
-			_cboCustomer.Focus();
+			_findCustomer.Focus();
 		};
 	}
 
@@ -111,8 +105,6 @@ internal sealed class frmTiepNhanKyGui : Form
 		dataTable.Columns.Add("ChatLieu", typeof(string));
 		dataTable.Columns.Add("TinhTrang", typeof(string));
 		dataTable.Columns.Add("GiaDeXuat", typeof(decimal));
-		dataTable.Columns.Add("GiaDangBan", typeof(decimal));
-		dataTable.Columns.Add("TrangThaiTiepNhan", typeof(string));
 		return dataTable;
 	}
 
@@ -140,19 +132,7 @@ internal sealed class frmTiepNhanKyGui : Form
 		tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 400f));
 		tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 		tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-		TableLayoutPanel tableLayoutPanel3 = new TableLayoutPanel
-		{
-			Dock = DockStyle.Fill,
-			ColumnCount = 1,
-			RowCount = 2,
-			Margin = new Padding(0, 0, 14, 0)
-		};
-		tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-		tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Absolute, 388f));
-		tableLayoutPanel3.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-		tableLayoutPanel3.Controls.Add(BuildCustomerCard(), 0, 0);
-		tableLayoutPanel3.Controls.Add(BuildGuideCard(), 0, 1);
-		tableLayoutPanel2.Controls.Add(tableLayoutPanel3, 0, 0);
+		tableLayoutPanel2.Controls.Add(BuildCustomerCard(), 0, 0);
 		tableLayoutPanel2.Controls.Add(BuildProductCard(), 1, 0);
 		tableLayoutPanel.Controls.Add(tableLayoutPanel2, 0, 1);
 		base.Controls.Add(tableLayoutPanel);
@@ -185,7 +165,7 @@ internal sealed class frmTiepNhanKyGui : Form
 		});
 		panel.Controls.Add(new Label
 		{
-			Text = "Ghi nhận người ký gửi, kiểm tra sản phẩm và lưu phiếu — nghiệp vụ then chốt của sàn.",
+			Text = "Ghi nhận người gửi và đồ tiếp nhận. Sản phẩm được xét duyệt sau khi lưu phiếu.",
 			Font = Theme.Small,
 			ForeColor = Theme.Muted,
 			AutoSize = true,
@@ -197,7 +177,7 @@ internal sealed class frmTiepNhanKyGui : Form
 		{
 			Close();
 		};
-		Button button2 = Theme.PrimaryButton("Lưu phiếu ký gửi", 190);
+		Button button2 = Theme.PrimaryButton("Lưu phiếu tiếp nhận", 190);
 		button2.Click += delegate
 		{
 			SaveSlip();
@@ -209,103 +189,72 @@ internal sealed class frmTiepNhanKyGui : Form
 
 	private Control BuildCustomerCard()
 	{
-		Card card = new Card("1. Người ký gửi & thông tin phiếu");
-		card.Dock = DockStyle.Fill;
-		card.Margin = new Padding(0, 0, 0, 12);
-		TableLayoutPanel tableLayoutPanel = new TableLayoutPanel
-		{
-			Dock = DockStyle.Fill,
-			ColumnCount = 1,
-			RowCount = 6,
-			Margin = new Padding(0)
-		};
-		for (int i = 0; i < 6; i++)
-		{
-			tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-		}
-		FlowLayoutPanel flowLayoutPanel = new FlowLayoutPanel
-		{
-			AutoSize = true,
-			WrapContents = false,
-			Margin = new Padding(0)
-		};
-		_txtPhoneSearch.Width = 150;
-		flowLayoutPanel.Controls.Add(Fields.Field("Tìm theo SĐT / tên", _txtPhoneSearch));
-		Button button = Theme.GhostButton("Tìm", 62);
-		button.Margin = new Padding(0, 22, 6, 0);
-		button.Click += delegate
-		{
-			SearchCustomer();
-		};
-		flowLayoutPanel.Controls.Add(button);
-		Button button2 = Theme.GhostButton("+ Khách mới", 126);
-		button2.Margin = new Padding(0, 22, 0, 0);
-		button2.Click += delegate
-		{
-			AddCustomer(_txtPhoneSearch.Text.Trim());
-		};
-		flowLayoutPanel.Controls.Add(button2);
-		tableLayoutPanel.Controls.Add(flowLayoutPanel, 0, 0);
-		tableLayoutPanel.Controls.Add(_lblSearchResult, 0, 1);
-		tableLayoutPanel.Controls.Add(Fields.Field("Khách hàng", _cboCustomer), 0, 2);
-		_cboCustomer.SelectedIndexChanged += delegate
-		{
-			UpdateCustomerInfo();
-		};
-		_lblContact.Margin = new Padding(0, 0, 0, 4);
-		tableLayoutPanel.Controls.Add(_lblContact, 0, 3);
-		TableLayoutPanel tableLayoutPanel2 = new TableLayoutPanel
-		{
-			AutoSize = true,
-			ColumnCount = 2,
-			RowCount = 1,
-			Margin = new Padding(0)
-		};
-		tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 212f));
-		tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 152f));
-		tableLayoutPanel2.Controls.Add(Fields.Field("Nhân viên tiếp nhận", _cboEmployee), 0, 0);
-		tableLayoutPanel2.Controls.Add(Fields.Field("Ngày ký gửi", _dtpDate), 1, 0);
-		tableLayoutPanel.Controls.Add(tableLayoutPanel2, 0, 4);
-		Panel panel = new Panel
-		{
-			Height = 76,
-			Width = 368,
-			Margin = new Padding(0)
-		};
-		panel.Controls.Add(new Label
-		{
-			Text = "Ghi chú",
-			AutoSize = true,
-			Font = Theme.Small,
-			ForeColor = Theme.Muted,
-			Location = new Point(0, 0)
-		});
-		_txtNote.Location = new Point(0, 20);
-		panel.Controls.Add(_txtNote);
-		tableLayoutPanel.Controls.Add(panel, 0, 5);
-		card.Body.Controls.Add(tableLayoutPanel);
-		return card;
-	}
+		var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(0, 0, 14, 0) };
+		_customerSections.Dock = DockStyle.Top;
+		_customerSections.Height = 450;
+		_customerSections.ColumnCount = 1;
+		_customerSections.RowCount = 2;
+		_customerSections.Margin = new Padding(0);
+		_customerSections.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+		_customerSections.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
+		_customerSections.RowStyles.Add(new RowStyle(SizeType.Absolute, 260));
 
-	private Control BuildGuideCard()
+		var customerCard = new Card("Người ký gửi") { Dock = DockStyle.Fill };
+		var customer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
+		customer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+		customer.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+		customer.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+		customer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+		customer.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+		customer.Controls.Add(_customerName, 0, 0);
+		customer.Controls.Add(_customerHint, 0, 1);
+		_lblContact.Dock = DockStyle.Fill;
+		_lblContact.Margin = new Padding(0, 0, 0, 8);
+		_lblContact.ForeColor = Theme.Ink;
+		_lblContact.Font = Theme.Body;
+		_lblContact.AutoEllipsis = true;
+		customer.Controls.Add(_lblContact, 0, 2);
+		var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
+		_findCustomer.Margin = new Padding(0, 0, 8, 0);
+		_addCustomer.Margin = new Padding(0);
+		_findCustomer.Click += (_, _) => SearchCustomer();
+		_addCustomer.Click += (_, _) => AddCustomer();
+		actions.Controls.Add(_findCustomer);
+		actions.Controls.Add(_addCustomer);
+		customer.Controls.Add(actions, 0, 3);
+		customerCard.Body.Controls.Add(customer);
+		_customerSections.Controls.Add(customerCard, 0, 0);
+
+		var receiptCard = new Card("Thông tin tiếp nhận") { Dock = DockStyle.Fill, Margin = new Padding(0) };
+		var receipt = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = new Padding(0) };
+		receipt.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+		receipt.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+		receipt.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+		receipt.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+		receipt.Controls.Add(IntakeField("Nhân viên tiếp nhận", _cboEmployee), 0, 0);
+		receipt.Controls.Add(IntakeField("Ngày ký gửi", _dtpDate), 0, 1);
+		receipt.Controls.Add(IntakeField("Ghi chú phiếu ký gửi", _txtNote), 0, 2);
+		receiptCard.Body.Controls.Add(receipt);
+		_customerSections.Controls.Add(receiptCard, 0, 1);
+		scroll.Controls.Add(_customerSections);
+		UpdateCustomerInfo();
+		return scroll;
+	}
+	private static Control IntakeField(string title, Control input)
 	{
-		Card card = new Card("Quy tắc nghiệp vụ áp dụng");
-		card.Dock = DockStyle.Fill;
-		card.Margin = new Padding(0);
-		Label value = new Label
-		{
-			Dock = DockStyle.Fill,
-			Font = Theme.Small,
-			ForeColor = Theme.Muted,
-			Text = "• Phiếu phải có ít nhất 01 sản phẩm.\n• Sản phẩm chờ duyệt chưa có giá bán; sản phẩm đã chấp nhận bắt buộc có giá đăng bán lớn hơn 0.\n• Hoa hồng sàn cố định 20% trên giá bán thực tế.\n• Không trả lại sản phẩm đã bán hoặc đang giữ trong đơn; mỗi sản phẩm chỉ quyết toán một lần."
-		};
-		card.Body.Controls.Add(value);
-		return card;
+		var field = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0, 0, 0, 6) };
+		field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+		field.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+		field.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+		field.Controls.Add(new Label { Text = title, Dock = DockStyle.Fill, Font = Theme.Small, ForeColor = Theme.Muted }, 0, 0);
+		input.Dock = DockStyle.Fill;
+		input.Margin = new Padding(0);
+		field.Controls.Add(input, 0, 1);
+		return field;
 	}
-
 	private Control BuildProductCard()
 	{
-		Card card = new Card("2. Sản phẩm ký gửi trong phiếu");
+		Card card = new Card("Sản phẩm ký gửi trong phiếu");
 		card.Dock = DockStyle.Fill;
 		card.Margin = new Padding(0);
 		TableLayoutPanel tableLayoutPanel = new TableLayoutPanel
@@ -330,19 +279,6 @@ internal sealed class frmTiepNhanKyGui : Form
 		flowLayoutPanel.Controls.Add(Fields.Field("Chất liệu", _txtMaterial));
 		flowLayoutPanel.Controls.Add(Fields.Field("Tình trạng", _txtCondition));
 		flowLayoutPanel.Controls.Add(Fields.Field("Giá đề xuất", _numProposed));
-		flowLayoutPanel.Controls.Add(Fields.Field("Giá đăng bán", _numListed));
-		flowLayoutPanel.Controls.Add(Fields.Field("Trạng thái duyệt", _cboApproval));
-		_cboApproval.Items.AddRange("Chờ xử lý", "Đã chấp nhận");
-		_cboApproval.SelectedIndexChanged += delegate
-		{
-			bool flag = Convert.ToString(_cboApproval.SelectedItem) == "Chờ xử lý";
-			_numListed.Enabled = !flag;
-			if (flag)
-			{
-				_numListed.Value = 0m;
-			}
-		};
-		_cboApproval.SelectedIndex = 0;
 		tableLayoutPanel.Controls.Add(flowLayoutPanel, 0, 0);
 		Theme.StyleGrid(_grid);
 		_grid.Dock = DockStyle.Fill;
@@ -376,7 +312,7 @@ internal sealed class frmTiepNhanKyGui : Form
 			RemoveSelected();
 		};
 		tableLayoutPanel2.Controls.Add(button2, 2, 0);
-		Button button3 = Theme.PrimaryButton("Lưu phiếu ký gửi", 180);
+		Button button3 = Theme.PrimaryButton("Lưu phiếu tiếp nhận", 180);
 		button3.Click += delegate
 		{
 			SaveSlip();
@@ -387,41 +323,20 @@ internal sealed class frmTiepNhanKyGui : Form
 		return card;
 	}
 
-	private void LoadCustomers(int? selectId = null)
+	private void LoadCustomers(int selectId)
 	{
-		DataTable dataTable = Db.Query("SELECT MaKH, HoTen, SoDienThoai, DiaChi FROM dbo.KHACH_HANG ORDER BY HoTen");
-		DataTable dataTable2 = dataTable.Copy();
-		dataTable2.Columns.Add("HienThi", typeof(string));
-		foreach (DataRow row in dataTable2.Rows)
-		{
-			row["HienThi"] = $"{row["HoTen"]} — {row["SoDienThoai"]}";
-		}
-		_cboCustomer.DataSource = dataTable2;
-		_cboCustomer.DisplayMember = "HienThi";
-		_cboCustomer.ValueMember = "MaKH";
-		if (selectId.HasValue)
-		{
-			int valueOrDefault = selectId.GetValueOrDefault();
-			if (true)
-			{
-				for (int i = 0; i < dataTable2.Rows.Count; i++)
-				{
-					if (Convert.ToInt32(dataTable2.Rows[i]["MaKH"]) == valueOrDefault)
-					{
-						_cboCustomer.SelectedIndex = i;
-						break;
-					}
-				}
-			}
-		}
+		var customers = Db.Query("SELECT MaKH, HoTen, SoDienThoai, Email, DiaChi FROM dbo.KHACH_HANG WHERE MaKH = @Id",
+			Db.Param("@Id", selectId));
+		if (customers.Rows.Count == 0)
+			throw new InvalidOperationException("Hồ sơ khách hàng không còn tồn tại. Vui lòng chọn lại.");
+		_selectedCustomer = customers.Rows[0];
 		UpdateCustomerInfo();
 	}
-
 	private void LoadLookups()
 	{
 		try
 		{
-			LoadCustomers();
+
 			DataTable dataTable = Db.Query("SELECT MaNV, HoTen, ChucVu FROM dbo.NHAN_VIEN WHERE TrangThai = N'Đang làm việc' ORDER BY HoTen");
 			DataTable dataTable2 = dataTable.Copy();
 			dataTable2.Columns.Add("HienThi", typeof(string));
@@ -432,6 +347,7 @@ internal sealed class frmTiepNhanKyGui : Form
 			_cboEmployee.DataSource = dataTable2;
 			_cboEmployee.DisplayMember = "HienThi";
 			_cboEmployee.ValueMember = "MaNV";
+			DemoSession.SelectManager(_cboEmployee);
 			_cboCategory.DataSource = Db.Query("SELECT MaDM, TenDanhMuc FROM dbo.DANH_MUC ORDER BY TenDanhMuc");
 			_cboCategory.DisplayMember = "TenDanhMuc";
 			_cboCategory.ValueMember = "MaDM";
@@ -455,98 +371,41 @@ internal sealed class frmTiepNhanKyGui : Form
 
 	private void UpdateCustomerInfo()
 	{
-		if (_cboCustomer.SelectedItem is DataRowView dataRowView)
+		var selected = _selectedCustomer is not null;
+		_customerName.Text = selected ? Convert.ToString(_selectedCustomer!["HoTen"]) : "Chưa chọn khách hàng";
+		_customerHint.Text = selected ? $"Mã khách hàng: KH{_selectedCustomer!["MaKH"]}" : "Tìm khách có sẵn hoặc thêm hồ sơ mới.";
+		_lblContact.Visible = selected;
+		_findCustomer.Text = selected ? "Đổi khách" : "Tìm khách hàng";
+		_addCustomer.Visible = !selected;
+		_customerSections.RowStyles[0].Height = selected ? 290 : 190;
+		_customerSections.Height = selected ? 550 : 450;
+		if (_selectedCustomer is DataRow customer)
 		{
-			string text = Convert.ToString(dataRowView["SoDienThoai"]) ?? "—";
-			string text2 = Convert.ToString(dataRowView["DiaChi"]);
-			string text3 = ((text2 != null && text2.Length > 0) ? text2 : "(Chưa cập nhật địa chỉ)");
-			_lblContact.Text = "Điện thoại: " + text + "\r\nĐ/c: " + text3;
+			string Value(string column) => string.IsNullOrWhiteSpace(Convert.ToString(customer[column]))
+				? "Chưa cập nhật" : Convert.ToString(customer[column])!;
+			_lblContact.Text = $"Điện thoại: {Value("SoDienThoai")}\r\nEmail: {Value("Email")}\r\nĐịa chỉ: {Value("DiaChi")}";
 		}
+		else _lblContact.Text = "";
 	}
-
-	private void AddCustomer(string? keyword)
+	private void AddCustomer()
 	{
-		string prefillName = null;
-		string prefillPhone = null;
-		string text = keyword?.Trim();
-		if (!string.IsNullOrEmpty(text))
+		using var dialog = new frmKhachHangMoi();
+		if (dialog.ShowDialog(this) != DialogResult.OK) return;
+		try { LoadCustomers(dialog.NewCustomerId); }
+		catch (Exception ex)
 		{
-			if (text.All(delegate(char ch)
-			{
-				bool flag = char.IsDigit(ch);
-				bool flag2 = flag;
-				if (!flag2)
-				{
-					bool flag3;
-					switch (ch)
-					{
-					case ' ':
-					case '+':
-					case '-':
-					case '.':
-						flag3 = true;
-						break;
-					default:
-						flag3 = false;
-						break;
-					}
-					flag2 = flag3;
-				}
-				return flag2;
-			}))
-			{
-				prefillPhone = text;
-			}
-			else
-			{
-				prefillName = text;
-			}
-		}
-		using frmKhachHangMoi frmKhachHangMoi2 = new frmKhachHangMoi(prefillName, prefillPhone);
-		Form form = (base.TopLevel ? this : base.Parent?.FindForm());
-		DialogResult dialogResult = ((form == null) ? frmKhachHangMoi2.ShowDialog() : frmKhachHangMoi2.ShowDialog(form));
-		if (dialogResult == DialogResult.OK)
-		{
-			LoadCustomers(frmKhachHangMoi2.NewCustomerId);
-			_txtPhoneSearch.Clear();
-			_lblSearchResult.Text = "Đã thêm khách hàng mới: " + frmKhachHangMoi2.NewCustomerName + ". Phiếu sẽ dùng khách này.";
-			_lblSearchResult.ForeColor = Theme.Success;
+			MessageBox.Show(this, "Đã tạo khách hàng nhưng chưa tải được hồ sơ: " + Db.ErrorMessage(ex),
+				"Thông tin khách hàng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 		}
 	}
-
 	private void SearchCustomer()
 	{
-		string text = _txtPhoneSearch.Text.Trim();
-		if (text.Length == 0)
-		{
-			_lblSearchResult.Text = "Nhập số điện thoại hoặc tên khách hàng cần tìm.";
-			_lblSearchResult.ForeColor = Theme.Muted;
-			return;
-		}
-		DataTable dataTable = Db.Query("SELECT TOP 5 MaKH, HoTen, SoDienThoai FROM dbo.KHACH_HANG WHERE SoDienThoai LIKE @Key OR HoTen LIKE @Key ORDER BY HoTen", Db.Param("@Key", "%" + text + "%"));
-		if (dataTable.Rows.Count == 0)
-		{
-			_lblSearchResult.Text = "Không tìm thấy khách hàng phù hợp.";
-			_lblSearchResult.ForeColor = Theme.Danger;
-			if (MessageBox.Show(this, "Không tìm thấy khách hàng phù hợp. Tạo khách hàng mới?", "Thêm khách hàng", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-			{
-				AddCustomer(text);
-			}
-			return;
-		}
-		int num = Convert.ToInt32(dataTable.Rows[0]["MaKH"]);
-		for (int i = 0; i < _cboCustomer.Items.Count; i++)
-		{
-			if (_cboCustomer.Items[i] is DataRowView dataRowView && Convert.ToInt32(dataRowView["MaKH"]) == num)
-			{
-				_cboCustomer.SelectedIndex = i;
-				break;
-			}
-		}
-		_lblSearchResult.Text = $"Tìm thấy {dataTable.Rows.Count} khách hàng — đã chọn {dataTable.Rows[0]["HoTen"]}.";
-		_lblSearchResult.ForeColor = Theme.Success;
+		int? currentId = _selectedCustomer is null ? null : Convert.ToInt32(_selectedCustomer["MaKH"]);
+		using var dialog = new frmChonKhachHang(currentId);
+		if (dialog.ShowDialog(this) != DialogResult.OK || dialog.SelectedCustomer is null) return;
+		_selectedCustomer = dialog.SelectedCustomer;
+		UpdateCustomerInfo();
 	}
-
 	private void SyncDraftColumns()
 	{
 		Theme.StyleGrid(_grid);
@@ -559,8 +418,6 @@ internal sealed class frmTiepNhanKyGui : Form
 		_grid.Columns.Add(Theme.TextColumn("MauSac", "Màu sắc", 50));
 		_grid.Columns.Add(Theme.TextColumn("TinhTrang", "Tình trạng", 110));
 		_grid.Columns.Add(Theme.TextColumn("GiaDeXuat", "Giá đề xuất", 80, money: true));
-		_grid.Columns.Add(Theme.TextColumn("GiaDangBan", "Giá đăng bán", 80, money: true));
-		_grid.Columns.Add(Theme.TextColumn("TrangThaiTiepNhan", "Trạng thái duyệt", 110));
 		_grid.DataSource = _draft;
 		_lblCount.Text = "0 sản phẩm trong phiếu";
 	}
@@ -588,26 +445,18 @@ internal sealed class frmTiepNhanKyGui : Form
 			_cboCategory.Focus();
 			return false;
 		}
-		string text3 = Convert.ToString(_cboApproval.SelectedItem) ?? "Chờ xử lý";
-		if (text3 == "Đã chấp nhận" && _numListed.Value <= 0m)
-		{
-			_lblFormError.Text = "Sản phẩm đã chấp nhận phải có giá đăng bán lớn hơn 0.";
-			_numListed.Focus();
-			return false;
-		}
 		string text4 = _cboCategory.Text;
 		object selectedValue = _cboBrand.SelectedValue;
-		AddProductRow(text, maDm, text4, (selectedValue == null || selectedValue is DBNull) ? ((int?)null) : new int?(Convert.ToInt32(_cboBrand.SelectedValue)), _cboBrand.Text, _txtSize.Text.Trim(), _txtColor.Text.Trim(), _txtMaterial.Text.Trim(), text2, _numProposed.Value, (text3 == "Đã chấp nhận") ? new decimal?(_numListed.Value) : ((decimal?)null), text3);
+		AddProductRow(text, maDm, text4, (selectedValue == null || selectedValue is DBNull) ? ((int?)null) : new int?(Convert.ToInt32(_cboBrand.SelectedValue)), _cboBrand.Text, _txtSize.Text.Trim(), _txtColor.Text.Trim(), _txtMaterial.Text.Trim(), text2, _numProposed.Value);
 		_txtName.Clear();
 		_txtSize.Clear();
 		_txtColor.Clear();
 		_numProposed.Value = 0m;
-		_numListed.Value = 0m;
 		_txtName.Focus();
 		return true;
 	}
 
-	private void AddProductRow(string name, int maDm, string category, int? maTh, string brand, string size, string color, string material, string condition, decimal proposed, decimal? listed, string approval)
+	private void AddProductRow(string name, int maDm, string category, int? maTh, string brand, string size, string color, string material, string condition, decimal proposed)
 	{
 		DataRow dataRow = _draft.NewRow();
 		dataRow["MaDM"] = maDm;
@@ -620,8 +469,6 @@ internal sealed class frmTiepNhanKyGui : Form
 		dataRow["ChatLieu"] = material;
 		dataRow["TinhTrang"] = condition;
 		dataRow["GiaDeXuat"] = proposed;
-		dataRow["GiaDangBan"] = ((!listed.HasValue) ? DBNull.Value : ((object)listed.Value));
-		dataRow["TrangThaiTiepNhan"] = approval;
 		_draft.Rows.Add(dataRow);
 		_lblCount.Text = $"{_draft.Rows.Count} sản phẩm trong phiếu";
 	}
@@ -638,7 +485,7 @@ internal sealed class frmTiepNhanKyGui : Form
 	private void SaveSlip()
 	{
 		_lblFormError.Text = string.Empty;
-		if (_cboCustomer.SelectedValue is int num)
+		if (_selectedCustomer?["MaKH"] is int num)
 		{
 			object selectedValue = _cboEmployee.SelectedValue;
 			int num2 = default(int);
@@ -679,8 +526,8 @@ internal sealed class frmTiepNhanKyGui : Form
 						dataRow2["ChatLieu"] = row["ChatLieu"];
 						dataRow2["TinhTrang"] = row["TinhTrang"];
 						dataRow2["GiaDeXuat"] = row["GiaDeXuat"];
-						dataRow2["GiaDangBan"] = row["GiaDangBan"];
-						dataRow2["TrangThaiTiepNhan"] = row["TrangThaiTiepNhan"];
+						dataRow2["GiaDangBan"] = DBNull.Value;
+						dataRow2["TrangThaiTiepNhan"] = "Chờ xử lý";
 						dataTable.Rows.Add(dataRow2);
 					}
 					using SqlConnection connection = Db.Open();
@@ -700,7 +547,7 @@ internal sealed class frmTiepNhanKyGui : Form
 					sqlCommand.Parameters.Add(sqlParameter);
 					sqlCommand.ExecuteNonQuery();
 					int value = Convert.ToInt32(sqlParameter.Value);
-					MessageBox.Show($"Đã lưu phiếu ký gửi #{value} với {_draft.Rows.Count} sản phẩm.\nSản phẩm chờ duyệt sẽ được kiểm định trước khi đăng bán.", "Lưu thành công", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+					MessageBox.Show($"Đã lưu phiếu tiếp nhận #{value} với {_draft.Rows.Count} sản phẩm.\nToàn bộ sản phẩm đang Chờ xử lý. Mở Xét duyệt ký gửi để duyệt từng món trước khi đăng bán.", "Lưu thành công", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 					_draft.Rows.Clear();
 					_lblCount.Text = "0 sản phẩm trong phiếu";
 					_txtNote.Clear();
@@ -719,18 +566,16 @@ internal sealed class frmTiepNhanKyGui : Form
 
 	public void PrepareCapture()
 	{
-		if (_cboCustomer.Items.Count > 0)
-		{
-			_cboCustomer.SelectedIndex = 0;
-		}
+		var sample = Db.Query("SELECT TOP (1) MaKH FROM dbo.KHACH_HANG ORDER BY MaKH");
+		if (sample.Rows.Count > 0) LoadCustomers(Convert.ToInt32(sample.Rows[0]["MaKH"]));
 		if (_cboEmployee.Items.Count > 0)
 		{
 			_cboEmployee.SelectedIndex = 0;
 		}
 		_txtNote.Text = "Khách mang 2 món đến ký gửi, đã kiểm tra cùng khách và chụp ảnh sản phẩm.";
-		AddProductRow("Đầm lụa Zara dáng suông", 1, "Quần áo", 3, "Zara", "M", "Đen", "Lụa pha", "Đã qua sử dụng, còn tốt 90%", 650000m, 590000m, "Đã chấp nhận");
-		AddProductRow("Túi xách da Mango", 4, "Túi xách", 10, "Mango", "One size", "Nâu", "Da PU", "Còn mới 98%, chưa dùng", 480000m, 450000m, "Đã chấp nhận");
-		AddProductRow("Mũ beret nỉ", 3, "Mũ nón", null, "(Không có thương hiệu)", "Free size", "Đen", "Nỉ", "Đã qua sử dụng, còn tốt 80%", 180000m, null, "Chờ xử lý");
+		AddProductRow("Đầm lụa Zara dáng suông", 1, "Quần áo", 3, "Zara", "M", "Đen", "Lụa pha", "Đã qua sử dụng, còn tốt 90%", 650000m);
+		AddProductRow("Túi xách da Mango", 4, "Túi xách", 10, "Mango", "One size", "Nâu", "Da PU", "Còn mới 98%, chưa dùng", 480000m);
+		AddProductRow("Mũ beret nỉ", 3, "Mũ nón", null, "(Không có thương hiệu)", "Free size", "Đen", "Nỉ", "Đã qua sử dụng, còn tốt 80%", 180000m);
 		_lblFormError.Text = string.Empty;
 	}
 }

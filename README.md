@@ -85,26 +85,65 @@ build.bat help       :: xem các chế độ: db, build, test, capture, export, 
 | Màn hình | Chức năng |
 |---|---|
 | Tổng quan | Thẻ số liệu, đơn cần xử lý, phiếu ký gửi gần đây |
-| Tiếp nhận ký gửi | Tạo phiếu + nhiều sản phẩm |
+| Tiếp nhận ký gửi | Lập phiếu, mọi món mặc định Chờ xử lý |
+| Xét duyệt ký gửi | Chấp nhận hoặc từ chối từng món sau khi lưu phiếu |
 | Lập đơn hàng & thu tiền | Giữ hàng, thu tiền, hoàn tất/hủy đơn |
 | Tra cứu sản phẩm | Lọc đa tiêu chí, xuất Excel |
 | Báo cáo doanh thu | Doanh thu/hoa hồng/theo tháng, xuất Excel |
 | Báo cáo quyết toán | Công nợ người ký gửi, lập phiếu chi, xuất Excel |
+| Quản lý nhân viên | Thêm nhân viên, xóa hồ sơ chưa có nghiệp vụ, cho nghỉ/làm việc lại, tìm kiếm và lọc |
 
-Khách chưa có trong hệ thống: tại màn hình **Tiếp nhận ký gửi**, bấm **+ Khách mới** cạnh ô tìm
-để nhập họ tên, số điện thoại, email, địa chỉ. Ứng dụng kiểm tra định dạng và trùng số điện thoại,
-lưu vào `KHACH_HANG` rồi tự chọn khách vừa tạo cho phiếu. Nếu tìm không thấy, hộp thoại cũng hỏi
-tạo khách mới với từ khóa đã nhập.
+### Demo theo vai trò quản lý
 
-Khách mua chưa có trong hệ thống: tại màn hình **Lập đơn hàng**, bấm **+ Khách mới** cạnh ô
-**Khách hàng mua**, nhập thông tin và lưu. Khách vừa tạo được chọn ngay cho đơn đang lập, không
-cần rời màn hình hay tạo trước ở nơi khác.
+Ứng dụng sử dụng quản lý đang làm việc có mã nhỏ nhất làm người thực hiện phiên demo
+(dữ liệu mẫu: Nguyễn Văn Hùng). Tên quản lý hiển thị trên tiêu đề cửa sổ. Đây là danh tính
+cho bản demo, chưa phải hệ thống tài khoản hoặc đăng nhập theo mật khẩu.
 
-Đưa sản phẩm lên bán: mở **Tra cứu sản phẩm**, chọn sản phẩm **Chờ xử lý** hoặc **Đã chấp nhận /
-Chưa đăng bán**, bấm **Đăng bán**, nhập giá và xác nhận. Sản phẩm chuyển sang **Đang bán** và xuất
-hiện trong màn hình **Lập đơn hàng**. Nếu sản phẩm đang Chờ xử lý, thao tác này duyệt và đăng bán
-luôn; nếu đang Đang bán thì dùng để đổi giá.
+Quản lý dùng được toàn bộ màn hình tiếp nhận, bán hàng, thu tiền, bàn giao, tra cứu, báo cáo
+và quyết toán. Ô nhân viên trong tiếp nhận, lập đơn và quyết toán mặc định chọn quản lý;
+vẫn có thể chọn nhân viên đang làm việc khác để ghi nhận người thực hiện.
 
+Mở **Quản lý nhân viên** ở sidebar:
+
+- **Thêm nhân viên:** nhập họ tên bắt buộc, điện thoại/email tùy chọn và chọn chức vụ
+  Nhân viên, Thu ngân hoặc Quản lý. Hồ sơ mới ở trạng thái Đang làm việc.
+- **Xóa nhân viên:** có hộp xác nhận. Hồ sơ chưa được phiếu ký gửi, đơn hàng hoặc phiếu
+  quyết toán tham chiếu sẽ được xóa; hồ sơ có lịch sử chuyển Đã nghỉ và giữ liên kết dữ liệu.
+- **Cho nghỉ việc / Làm việc lại:** đổi trạng thái mà không xóa hồ sơ. Nhân viên đã nghỉ
+  không xuất hiện trong danh sách người thực hiện khi mở các màn hình nghiệp vụ.
+- Không xóa hoặc cho nghỉ quản lý đang thực hiện phiên demo.
+
+Mở thẳng màn hình này bằng `dotnet run -- --open nhanvien`. Không cần thay đổi cấu trúc CSDL.
+
+Tại màn hình **Tiếp nhận ký gửi**, khung **Người ký gửi** chỉ hiện **Tìm khách hàng** và
+**+ Thêm khách mới** khi chưa chọn hồ sơ. Bấm **Tìm khách hàng** để mở hộp thoại có ô tìm
+họ tên/số điện thoại và bảng kết quả. Chọn một dòng rồi bấm **Chọn khách này**; có thể
+nhấp đúp dòng để chọn. Khi không thấy khách, dùng **+ Thêm khách mới** trong hộp thoại.
+
+Sau khi chọn, trang chính hiển thị tên, mã khách, điện thoại, email và địa chỉ. Nút
+**Đổi khách** mở lại hộp thoại; bấm **Hủy** giữ nguyên khách đang dùng. Tạo khách mới từ
+trang chính sẽ tự chọn hồ sơ vừa tạo. Khối **Thông tin tiếp nhận** bên dưới dành riêng
+cho nhân viên, ngày ký gửi và ghi chú.
+Tại màn hình **Lập đơn hàng**, phần **Khách hàng mua** dùng cùng cách chọn hồ sơ với tiếp nhận:
+
+- **Tìm khách hàng**: tra cứu theo tên hoặc số điện thoại trong hộp thoại, chọn dòng rồi xác nhận.
+- **Thêm khách mới**: tạo hồ sơ và tự chọn khách vừa tạo cho đơn đang lập.
+- Sau khi chọn, hiển thị tên, mã khách, điện thoại, email, địa chỉ và nút **Đổi khách**.
+- Hủy hộp thoại chọn giữ nguyên khách đang dùng. Không thể tạo đơn nếu chưa chọn khách mua.
+Luồng ký gửi gồm ba bước tách biệt:
+
+1. **Tiếp nhận ký gửi:** chọn người gửi, nhân viên, nhập đồ và giá đề xuất, bấm
+   **Lưu phiếu tiếp nhận**. Mọi món mặc định Chờ xử lý, chưa có giá hoặc trạng thái bán.
+2. **Xét duyệt ký gửi:** chọn phiếu, chọn từng món và bấm **Chấp nhận ký gửi** hoặc
+   **Từ chối**. Chấp nhận chưa cần giá; món chuyển Chưa đăng bán. Còn món chờ thì phiếu
+   vẫn Đang xử lý; xét hết có món nhận thì Đang ký gửi, tất cả từ chối thì Đã hủy.
+3. **Tra cứu sản phẩm:** chọn món Đã chấp nhận / Chưa đăng bán, bấm **Đăng bán**, chốt giá
+   lớn hơn 0 rồi xác nhận. Món mới chuyển Đang bán và có thể đưa vào đơn mua.
+
+Nút Đăng bán không tự xét duyệt món Chờ xử lý nữa. Bản nâng cấp CSDL nằm ở
+`db/11_tach_luong_ky_gui.sql`; script giữ nguyên dữ liệu và được `build.bat` áp dụng khi
+mở app. Nếu tự khôi phục .bak và mở thẳng exe, chạy script này trước. Kiểm tra luồng mới
+bằng `db/12_workflow_tests.sql` (19 ca, rollback dữ liệu thử, không phụ thuộc mã dữ liệu mẫu).
 Trả hàng khi người ký gửi không muốn ký gửi nữa: vẫn ở **Tra cứu sản phẩm**, chọn sản phẩm
 **Đã chấp nhận / Chưa đăng bán** hoặc **Đang bán**, bấm **Trả hàng** (nút cạnh **Đăng bán**) rồi xác
 nhận. Sản phẩm chuyển sang **Đã trả lại** và gỡ khỏi sàn; CSDL chặn nếu sản phẩm đang giữ, đã bán
@@ -117,8 +156,8 @@ danh sách sản phẩm thuộc phiếu. Ô tìm sản phẩm trong **Lập đơ
 Chế độ dòng lệnh:
 
 ```bat
-dotnet run --no-build -- --open banhang     :: mở cửa sổ chính và vào thẳng một màn hình (banhang, tiepnhan, tracuu, doanhthu, quyettoan)
-dotnet run --no-build -- --capture E:\Quanap\screenshots   :: chụp lại 6 ảnh màn hình
+dotnet run --no-build -- --open banhang     :: mở cửa sổ chính và vào thẳng một màn hình (banhang, tiepnhan, duyet, tracuu, doanhthu, quyettoan, nhanvien)
+dotnet run --no-build -- --capture E:\Quanap\screenshots   :: chụp lại 9 ảnh màn hình
 dotnet run --no-build -- --export                          :: xuất 3 tệp Excel mẫu vào exports\
 ```
 

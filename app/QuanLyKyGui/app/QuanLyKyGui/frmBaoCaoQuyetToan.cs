@@ -310,14 +310,7 @@ internal sealed class frmBaoCaoQuyetToan : Form
             _cboEmployee.DataSource = ev;
             _cboEmployee.DisplayMember = "HienThi";
             _cboEmployee.ValueMember = "MaNV";
-            foreach (DataRow row in ev.Rows)
-            {
-                if (Convert.ToString(row["ChucVu"]) == "Thu ngân")
-                {
-                    _cboEmployee.SelectedValue = row["MaNV"];
-                    break;
-                }
-            }
+            DemoSession.SelectManager(_cboEmployee);
         }
         catch (Exception ex)
         {
@@ -516,7 +509,9 @@ WHERE pkg.MaKH = @MaKH
             using var cn = Db.Open();
             using var cmd = new SqlCommand("dbo.sp_LapPhieuQuyetToan", cn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@MaKH", _selectedCustomer);
-            cmd.Parameters.AddWithValue("@MaNV", Convert.ToInt32(_cboEmployee.SelectedValue ?? 1));
+            if (_cboEmployee.SelectedValue is null)
+                throw new InvalidOperationException("Vui lòng chọn nhân viên thực hiện quyết toán.");
+            cmd.Parameters.AddWithValue("@MaNV", Convert.ToInt32(_cboEmployee.SelectedValue));
             cmd.Parameters.AddWithValue("@PhuongThuc", Convert.ToString(_cboMethod.SelectedItem));
             cmd.Parameters.AddWithValue("@GhiChu", _txtNote.Text.Trim().Length == 0 ? DBNull.Value : _txtNote.Text.Trim());
             cmd.Parameters.Add(Db.Structured("@DanhSach", "dbo.DanhSachCTDHType", data));

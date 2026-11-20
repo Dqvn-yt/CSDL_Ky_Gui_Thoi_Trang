@@ -162,7 +162,7 @@ internal sealed class frmTraCuuSanPham : Form
 		flowLayoutPanel.Controls.Add(Fields.Field("Danh mục", _cboCategory));
 		flowLayoutPanel.Controls.Add(Fields.Field("Thương hiệu", _cboBrand));
 		flowLayoutPanel.Controls.Add(Fields.Field("Kích thước", _txtSize));
-		flowLayoutPanel.Controls.Add(Fields.Field("Trạng thái", _cboStatus));
+		flowLayoutPanel.Controls.Add(Fields.Field("Trạng thái bán", _cboStatus));
 		flowLayoutPanel.Controls.Add(Fields.Field("Người ký gửi", _cboCustomer));
 		flowLayoutPanel.Controls.Add(Fields.Field("Giá từ", _numFrom));
 		flowLayoutPanel.Controls.Add(Fields.Field("Giá đến", _numTo));
@@ -326,7 +326,7 @@ internal sealed class frmTraCuuSanPham : Form
 			dataTable.Columns["MauSac"].Caption = "Màu sắc";
 			dataTable.Columns["ChatLieu"].Caption = "Chất liệu";
 			dataTable.Columns["TinhTrang"].Caption = "Tình trạng";
-			dataTable.Columns["GiaDeXuat"].Caption = "Giá đề xuất";
+			dataTable.Columns["GiaDeXuat"].Caption = "Giá khách đề xuất";
 			dataTable.Columns["GiaDangBan"].Caption = "Giá đăng bán";
 			dataTable.Columns["TrangThaiTiepNhan"].Caption = "Duyệt";
 			dataTable.Columns["TrangThaiBan"].Caption = "Trạng thái bán";
@@ -347,6 +347,8 @@ internal sealed class frmTraCuuSanPham : Form
 				["KichThuoc"] = "Size",
 				["MauSac"] = "Màu",
 				["TinhTrang"] = "Tình trạng",
+				["TrangThaiTiepNhan"] = "Kết quả duyệt",
+				["GiaDeXuat"] = "Giá khách đề xuất",
 				["GiaDangBan"] = "Giá đăng bán",
 				["TrangThaiBan"] = "Trạng thái",
 				["NgayDangBan"] = "Ngày đăng",
@@ -360,7 +362,7 @@ internal sealed class frmTraCuuSanPham : Form
 					_grid.Columns[item.Key].HeaderText = item.Value;
 				}
 			}
-			string[] array = new string[10] { "MaSP", "MaKH", "MaPKG", "ChatLieu", "GiaDeXuat", "NgayKyGui", "TrangThaiTiepNhan", "TrangThaiPhieu", "TenNhanVienTiepNhan", "DienThoaiNguoiKyGui" };
+			string[] array = new string[8] { "MaSP", "MaKH", "MaPKG", "ChatLieu", "NgayKyGui", "TrangThaiPhieu", "TenNhanVienTiepNhan", "DienThoaiNguoiKyGui" };
 			foreach (string columnName in array)
 			{
 				if (_grid.Columns.Contains(columnName))
@@ -374,10 +376,17 @@ internal sealed class frmTraCuuSanPham : Form
 			_grid.Columns["KichThuoc"].FillWeight = 55f;
 			_grid.Columns["MauSac"].FillWeight = 55f;
 			_grid.Columns["TinhTrang"].FillWeight = 120f;
-			_grid.Columns["GiaDangBan"].FillWeight = 80f;
-			_grid.Columns["TrangThaiBan"].FillWeight = 85f;
+			_grid.Columns["GiaDeXuat"]!.Visible = true;
+			_grid.Columns["GiaDeXuat"]!.DisplayIndex = _grid.Columns["GiaDangBan"]!.DisplayIndex - 1;
+			_grid.Columns["GiaDeXuat"]!.FillWeight = 100f;
+			_grid.Columns["GiaDeXuat"]!.MinimumWidth = 110;
+			_grid.Columns["GiaDangBan"].FillWeight = 100f;
+			_grid.Columns["GiaDangBan"]!.MinimumWidth = 110;
+			_grid.Columns["TrangThaiTiepNhan"]!.FillWeight = 125f;
+			_grid.Columns["TrangThaiBan"].FillWeight = 120f;
 			_grid.Columns["NgayDangBan"].FillWeight = 85f;
 			_grid.Columns["TenNguoiKyGui"].FillWeight = 115f;
+			Theme.MoneyColumn(_grid.Columns["GiaDeXuat"]);
 			Theme.MoneyColumn(_grid.Columns["GiaDangBan"]);
 			_grid.Columns["NgayDangBan"].DefaultCellStyle.Format = "dd/MM/yyyy";
 			_lblSummary.Text = $"Tìm thấy {dataTable.Rows.Count} sản phẩm";
@@ -441,13 +450,12 @@ internal sealed class frmTraCuuSanPham : Form
 		string text2 = Convert.ToString(dataRowView["TrangThaiTiepNhan"]) ?? "";
 		string text3 = ((dataRowView["TrangThaiBan"] is DBNull) ? null : Convert.ToString(dataRowView["TrangThaiBan"]));
 		decimal currentPrice = ((dataRowView["GiaDangBan"] is DBNull) ? 0m : Convert.ToDecimal(dataRowView["GiaDangBan"]));
-		if (text2 == "Từ chối" || text3 == "Đang giữ" || text3 == "Đã bán" || text3 == "Đã trả lại")
+		if (text2 != "Đã chấp nhận")
 		{
-			MessageBox.Show("Sản phẩm này không thể đăng bán ở trạng thái hiện tại.", "Đăng bán sản phẩm", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			MessageBox.Show("Chỉ được đăng bán sản phẩm đã được chấp nhận. Hãy xét duyệt tại trang Xét duyệt ký gửi trước.", "Đăng bán sản phẩm", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
 		}
-		bool flag = text2 == "Chờ xử lý";
-		if (!flag && !(text3 == "Chưa đăng bán") && !(text3 == "Đang bán"))
+		if (!(text3 == "Chưa đăng bán") && !(text3 == "Đang bán"))
 		{
 			MessageBox.Show("Chỉ đăng bán sản phẩm đã chấp nhận và chưa đăng bán.", "Đăng bán sản phẩm", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
@@ -466,10 +474,6 @@ internal sealed class frmTraCuuSanPham : Form
 				Db.Param("@MaSP", num),
 				Db.Param("@GiaDangBan", frmDangBanSanPham2.Price)
 			};
-			if (flag)
-			{
-				Db.Execute("EXEC dbo.sp_DuyetSanPham @MaSP, N'Đã chấp nhận', @GiaDangBan", ps);
-			}
 			Db.Execute("EXEC dbo.sp_DangBanSanPham @MaSP, @GiaDangBan", ps);
 			string text4 = ((text3 == "Đang bán") ? $"Đã cập nhật giá đăng bán “{text}” thành {frmDangBanSanPham2.Price:#,##0} đ." : $"Đã đăng bán “{text}” với giá {frmDangBanSanPham2.Price:#,##0} đ. Sản phẩm hiện ở trạng thái Đang bán.");
 			MessageBox.Show(text4, "Đăng bán thành công", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
@@ -549,7 +553,7 @@ internal sealed class frmTraCuuSanPham : Form
 				["MauSac"] = "Màu sắc",
 				["ChatLieu"] = "Chất liệu",
 				["TinhTrang"] = "Tình trạng",
-				["GiaDeXuat"] = "Giá đề xuất",
+				["GiaDeXuat"] = "Giá khách đề xuất",
 				["GiaDangBan"] = "Giá đăng bán",
 				["TrangThaiTiepNhan"] = "Duyệt",
 				["TrangThaiBan"] = "Trạng thái bán",

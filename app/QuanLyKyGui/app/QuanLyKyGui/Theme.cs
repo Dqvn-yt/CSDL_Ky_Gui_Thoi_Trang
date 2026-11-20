@@ -96,7 +96,9 @@ internal static class Theme
 			Width = width,
 			Font = Body,
 			DropDownStyle = ComboBoxStyle.DropDownList,
-			FlatStyle = FlatStyle.Flat,
+			FlatStyle = FlatStyle.Standard,
+			BackColor = Surface,
+			ForeColor = Ink,
 			Margin = new Padding(0, 4, 12, 10)
 		};
 	}

@@ -78,6 +78,8 @@ goto :done
 echo === Tạo lại cơ sở dữ liệu %DBNAME% ===
 call :create_db
 if errorlevel 1 goto :fail
+call :upgrade_workflow
+if errorlevel 1 goto :fail
 goto :done
 
 
@@ -96,11 +98,16 @@ if errorlevel 1 (
     goto :fail
 )
 echo - 07_validation.sql
+call :upgrade_workflow
+if errorlevel 1 goto :fail
 %SQLCMD% -i "%DBDIR%\07_validation.sql"
 if errorlevel 1 goto :fail
 echo.
 echo - 08_negative_tests.sql
 %SQLCMD% -i "%DBDIR%\08_negative_tests.sql"
+if errorlevel 1 goto :fail
+echo - 12_workflow_tests.sql
+%SQLCMD% -b -i "%DBDIR%\12_workflow_tests.sql"
 if errorlevel 1 goto :fail
 goto :done
 
@@ -140,11 +147,11 @@ echo   run        Kiểm tra/tạo CSDL, build rồi mở ứng dụng  (mặc �
 echo   db         Tạo lại CSDL (ưu tiên khôi phục từ bak\)
 echo   build      Chỉ build ứng dụng
 echo   test       Chạy 07_validation.sql và 08_negative_tests.sql
-echo   capture    Chụp lại 6 ảnh màn hình vào screenshots\
+echo   capture    Chụp lại 9 ảnh màn hình vào screenshots\
 echo   export     Xuất 3 tệp Excel mẫu vào exports\
 echo   help       Hiện trợ giúp này
 echo.
-echo   banhang, tiepnhan, tracuu, doanhthu, quyettoan
+echo   banhang, tiepnhan, duyet, tracuu, doanhthu, quyettoan, nhanvien
 echo              Mở ứng dụng và vào thẳng màn hình tương ứng
 echo.
 echo Yêu cầu: .NET 9 SDK, SQL Server 2025, sqlcmd.
@@ -185,7 +192,14 @@ if /i "%DBID%"=="NULL" (
 ) else (
     echo Đã có CSDL %DBNAME%.
 )
+call :upgrade_workflow
+if errorlevel 1 exit /b 1
 exit /b 0
+
+:upgrade_workflow
+echo - Cập nhật luồng tiếp nhận, xét duyệt và đăng bán
+%SQLCMD% -b -i "%DBDIR%\11_tach_luong_ky_gui.sql"
+exit /b %ERRORLEVEL%
 
 
 :create_db

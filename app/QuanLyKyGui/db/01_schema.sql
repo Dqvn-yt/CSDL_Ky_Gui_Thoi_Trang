@@ -117,6 +117,7 @@ CREATE TABLE dbo.SAN_PHAM
     CONSTRAINT CK_SAN_PHAM_TinhTrang CHECK (LEN(LTRIM(RTRIM(TinhTrang))) > 0),
     CONSTRAINT CK_SAN_PHAM_GiaDeXuat CHECK (GiaDeXuat IS NULL OR GiaDeXuat >= 0),
     CONSTRAINT CK_SAN_PHAM_GiaDangBan CHECK (GiaDangBan IS NULL OR GiaDangBan >= 0),
+    CONSTRAINT CK_SAN_PHAM_ChuaDuyetKhongGia CHECK (TrangThaiTiepNhan = N'Đã chấp nhận' OR GiaDangBan IS NULL),
     CONSTRAINT CK_SAN_PHAM_TrangThaiTiepNhan CHECK (TrangThaiTiepNhan IN (N'Chờ xử lý', N'Đã chấp nhận', N'Từ chối')),
     CONSTRAINT CK_SAN_PHAM_TrangThaiBan CHECK (TrangThaiBan IS NULL OR TrangThaiBan IN (N'Chưa đăng bán', N'Đang bán', N'Đang giữ', N'Đã bán', N'Đã trả lại')),
     CONSTRAINT CK_SAN_PHAM_TrangThaiPhuHop CHECK

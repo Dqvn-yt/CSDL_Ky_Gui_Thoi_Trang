@@ -90,7 +90,7 @@ internal sealed class frmMain : Form
         });
         right.Controls.Add(new Label
         {
-            Text = "SQL Server 2025  •  localhost  •  Windows Authentication",
+            Text = "Phiên demo: Quản lý • Toàn bộ nghiệp vụ cửa hàng",
             Font = Theme.Small,
             ForeColor = ColorTranslator.FromHtml("#BDB2BE"),
             AutoSize = true
@@ -134,10 +134,12 @@ internal sealed class frmMain : Form
         {
             ("Tổng quan", ShowDashboard),
             ("Tiếp nhận ký gửi", OpenIntake),
-            ("Lập đơn hàng", OpenOrder),
+            ("Xét duyệt ký gửi", OpenReview),
             ("Tra cứu sản phẩm", OpenSearch),
+            ("Lập đơn hàng", OpenOrder),
             ("Báo cáo doanh thu", OpenRevenue),
-            ("Báo cáo quyết toán", OpenSettlement)
+            ("Báo cáo quyết toán", OpenSettlement),
+            ("Quản lý nhân viên", OpenEmployees)
         };
 
         _navButtons.Clear();
@@ -333,6 +335,7 @@ internal sealed class frmMain : Form
     {
         try
         {
+            Text = $"Thiên Kim Consignment — Demo quản lý: {DemoSession.ManagerName}";
             var onSale = Db.Long("SELECT COUNT(*) FROM dbo.SAN_PHAM WHERE TrangThaiBan = N'Đang bán'");
             var pendingOrders = Db.Long("SELECT COUNT(*) FROM dbo.DON_HANG WHERE TrangThai = N'Chờ thanh toán'");
             var dueOrders = Db.Long("SELECT COUNT(*) FROM dbo.vw_DonHang_TongHop WHERE TrangThai = N'Chờ thanh toán' AND TinhTrangHan = N'Quá hạn'");
@@ -502,10 +505,12 @@ ORDER BY NgayKyGui DESC;");
         switch (key.ToLowerInvariant())
         {
             case "tiepnhan": OpenIntake(); return;
+            case "duyet": OpenReview(); return;
             case "banhang": OpenOrder(); return;
             case "tracuu": OpenSearch(); return;
             case "doanhthu": OpenRevenue(); return;
             case "quyettoan": OpenSettlement(); return;
+            case "nhanvien": OpenEmployees(); return;
         }
 
         if (key.StartsWith("phieu:", StringComparison.OrdinalIgnoreCase) &&
@@ -514,8 +519,10 @@ ORDER BY NgayKyGui DESC;");
     }
 
     private void OpenIntake() => ShowPage(new frmTiepNhanKyGui(), 1);
-    private void OpenOrder() => ShowPage(new frmLapDonHang(), 2);
+    private void OpenReview() => ShowPage(new frmXetDuyetKyGui(), 2);
+    private void OpenOrder() => ShowPage(new frmLapDonHang(), 4);
     private void OpenSearch() => ShowPage(new frmTraCuuSanPham(), 3);
-    private void OpenRevenue() => ShowPage(new frmBaoCaoDoanhThu(), 4);
-    private void OpenSettlement() => ShowPage(new frmBaoCaoQuyetToan(), 5);
+    private void OpenRevenue() => ShowPage(new frmBaoCaoDoanhThu(), 5);
+    private void OpenSettlement() => ShowPage(new frmBaoCaoQuyetToan(), 6);
+    private void OpenEmployees() => ShowPage(new frmQuanLyNhanVien(), 7);
 }

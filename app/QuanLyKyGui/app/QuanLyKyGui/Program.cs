@@ -112,6 +112,18 @@ internal static class Program
 				frmBaoCaoQuyetToan2.PrepareCapture();
 				Shot(frmBaoCaoQuyetToan2, "06-bao-cao-quyet-toan");
 			}
+			using (var employees = new frmMain("nhanvien"))
+			{
+				Shot(employees, "07-quan-ly-nhan-vien");
+			}
+			using (var newEmployee = new frmNhanVienMoi())
+			{
+				Shot(newEmployee, "08-them-nhan-vien");
+			}
+			using (var review = new frmMain("duyet"))
+			{
+				Shot(review, "09-xet-duyet-ky-gui");
+			}
 			File.AppendAllText(path, $"Hoàn tất {DateTime.Now:dd/MM/yyyy HH:mm:ss}\n");
 		}
 		catch (Exception ex)
